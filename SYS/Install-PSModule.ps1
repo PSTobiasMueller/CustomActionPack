@@ -29,9 +29,9 @@
 [CmdLetBinding()]
 param(
     [Parameter(Mandatory = $False)]
-    [System.String]$LocalRepositoryName = "SchriesheimLocal",
+    [System.String]$LocalRepositoryName,
     [Parameter(Mandatory = $False)]
-    [System.String]$LocalRepositoryPath = "\\file-a\edv\PowerShellRepository",
+    [System.String]$LocalRepositoryPath,
     [Parameter(Mandatory = $True)]
     [System.String[]]$RequiredModules
 )
