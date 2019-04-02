@@ -25,15 +25,13 @@
 Param
 (
     [Parameter(Mandatory = $true)]
-    [string]
-    $adminAddress = '',
-    [string]
-    $machineCatalogName = '',
-    [switch]
-    $ImageOutOfDate,
+    [string]$adminAddress = '',
+    [string]$machineCatalogName = '',
+    [switch]$ImageOutOfDate,
     [ValidateSet('Off', 'Unregistered', 'Available', 'Disconnected', 'InUse', IgnoreCase = $true)]
-    [string]
-    $SummaryState
+    [string]$SummaryState,
+    [string]$AssociatedUserFullNames,
+    [string]$AssociatedUserNames
 )
 
 begin
@@ -65,10 +63,24 @@ begin
         }
     }
 
-    If ($SummaryState)
+    If (!([System.String]::IsNullOrEmpty($SummaryState)))
     {
         $paramGetBrokerMachine += [hashtable] @{
             SummaryState = $SummaryState
+        }
+    }
+
+    If (!([System.String]::IsNullOrEmpty($AssociatedUserFullNames)))
+    {
+        $paramGetBrokerMachine += [hashtable] @{
+            AssociatedUserFullName = "*$AssociatedUserFullNames*"
+        }
+    }
+
+    If (!([System.String]::IsNullOrEmpty($AssociatedUserNames)))
+    {
+        $paramGetBrokerMachine += [hashtable] @{
+            AssociatedUserNames = "*$AssociatedUserNames*"
         }
     }
 }
@@ -79,7 +91,7 @@ process
     # Get the master VM image from the same storage resource we're going to deploy to. Could pull this from another storage resource available to the host
     Write-Verbose -Message "Getting the Broker Machines for the catalog: $machineCatalogName"
 
-    $Machines = Get-BrokerMachine @paramGetBrokerMachine | Sort-Object -Property HostedMachineName | Select-Object CatalogName, HostedMachineName, AssociatedUserFullNames, AssociatedUserNames, PowerState, RegistrationState, ImageOutOfDate
+    $Machines = Get-BrokerMachine @paramGetBrokerMachine | Sort-Object -Property HostedMachineName | Select-Object HostedMachineName, AssociatedUserFullNames, AssociatedUserNames, PowerState, RegistrationState, ImageOutOfDate
 }
 
 end
