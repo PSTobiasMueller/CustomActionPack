@@ -20,6 +20,11 @@
     .PARAMETER summaryState
         Specifies the summeryState of the Broker Machine you want to set the powerAction
 
+    .PARAMETER SRWhatIf
+        Test-Modus, you'll only see what machines will be assigned the powerAction but the
+        powerAction will not be applied.
+
+
     .NOTES
         Version
         1.0.0   28.03.2019  TM  Inital Release
@@ -39,7 +44,8 @@ Param
     $ImageOutOfDate,
     [ValidateSet('Off', 'registered', 'Available', 'Disconnected', 'InUse', IgnoreCase = $true)]
     [string]
-    $SummaryState
+    $SummaryState,
+    [switch]$SRWhatIf
 )
 
 begin
@@ -64,38 +70,43 @@ begin
         CatalogName  = $machineCatalogName
     }
 
-    If ($ImageOutOfDate)
+    If ($PSBoundParameters.ContainsKey($ImageOutOfDate))
     {
-        $paramGetBrokerMachine += [hashtable] @{
-            ImageOutOfDate = [bool]::Parse($ImageOutOfDate)
-        }
+        $paramGetBrokerMachine.Add('ImageOutOfDate', [bool]::Parse($ImageOutOfDate))
     }
 
-    If ($SummaryState)
+    If ($PSBoundParameters.ContainsKey($SummaryState))
     {
-        $paramGetBrokerMachine += [hashtable] @{
-            SummaryState = $SummaryState
-        }
+        $paramGetBrokerMachine.Add('SummaryState', $SummaryState)
     }
 }
 
 process
 {
-
     # Get the master VM image from the same storage resource we're going to deploy to. Could pull this from another storage resource available to the host
     Write-Verbose -Message "Getting the Broker Machines for the catalog: $machineCatalogName"
 
-    $Machines = Get-BrokerMachine @paramGetBrokerMachine | New-BrokerHostingPowerAction  -Action $powerAction -AdminAddress "b1shba-xen.b1shba.intern:80"
+    if ($PSBoundParameters.ContainsKey('SRWhatIf'))
+    {
+        Write-Verbose -Message "The powerAction $poweraction would be applied to the those Machines:"
+        $resultMessage += "WHAT IF: The powerAction $poweraction would be applied to the those Machines:"
+        $Machines = Get-BrokerMachine @paramGetBrokerMachine
+    }
+    else
+    {
+        Write-Verbose -Message "The powerAction $poweraction was applied to the those Machines:"
+        $resultMessage += "The powerAction $poweraction was applied to the those Machines:"
+        $Machines = Get-BrokerMachine @paramGetBrokerMachine | New-BrokerHostingPowerAction  -Action $powerAction -AdminAddress "b1shba-xen.b1shba.intern:80"
+    }
+
 }
 
 end
 {
     if ($SRXEnv)
     {
-        $Result = @()
-        $Result += "The powerAction $poweraction was applied to the those Machines:"
-        $Result += $Machines | Format-Table -AutoSize -Property HostedMachineName, AssociatedUserFullNames
-        $SRXEnv.ResultMessage = $Result
+        $resultMessage += $Machines | Format-Table -AutoSize -Property HostedMachineName, AssociatedUserFullNames, SummaryState
+        $SRXEnv.ResultMessage = $resultMessage
     }
     else
     {
